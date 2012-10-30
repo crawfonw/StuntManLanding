@@ -66,10 +66,9 @@ class BoxStack():
     def apply_force_to_box(self, FL, box):
         box.apply_force(FL[0], FL[1])
         box.get_resulting_forces()
-        if box.associated_boxes['left'] is not None:
+        if box.associated_boxes['left'] is not None and box.associated_boxes['right'] is not None:
             left = box.associated_boxes['left']
             self.apply_force_to_box((box.resulting_forces[0], left[1]), left[0])
-        if box.associated_boxes['right'] is not None:
             right = box.associated_boxes['right']
             self.apply_force_to_box((box.resulting_forces[1], right[1]), right[0])
     
