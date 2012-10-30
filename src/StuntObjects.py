@@ -72,6 +72,24 @@ class BoxStack():
         if box.associated_boxes['right'] is not None:
             right = box.associated_boxes['right']
             self.apply_force_to_box((box.resulting_forces[1], right[1]), right[0])
+    
+    def all_boxes_crushed(self):
+        for box in self.boxes:
+            if not box.is_crushed:
+                return False
+        return True
+    
+    def calculate_total_force_to_ground(self):
+        v = vec2d(0,0)
+        for box in self.boxes:
+            if box.associated_boxes['left'] is None:
+                #if no associated boxes we can just assume they are on the ground
+                v += box.resulting_forces[0]
+            if box.associated_boxes['right'] is None:
+                #if no associated boxes we can just assume they are on the ground
+                v += box.resulting_forces[1]
+        return v
+                
 
 def six_box_pyramid(F):
     '''
@@ -90,9 +108,10 @@ def six_box_pyramid(F):
     b1 = Box('Box 1', 10, 5, [(b2, b2.size / 2), (b3, b3.size / 2)])
     
     system = BoxStack((F, b1.size / 2), [b1,b2,b3,b4,b5,b6])
-    #system.apply_forces_with_locations_to_system()
     system.apply_force_to_box((F, b1.size / 2), b1)
     for box in system.boxes:
         box.print_box_info()
+    print system.all_boxes_crushed()
+    print system.calculate_total_force_to_ground()
     
-six_box_pyramid(vec2d(0, 40))
+six_box_pyramid(vec2d(0, 80))
