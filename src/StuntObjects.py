@@ -17,6 +17,9 @@ class Box():
         else:
             raise ValueError('Length of argument boxes should be 0 or 2.')
     
+    def apply_force(self, F, loc):
+        self.forces_with_locs.append((F, loc))
+    
     def get_resulting_forces(self):
         left_y_force = vec2d(0,0)
         right_y_force = vec2d(0,0)
@@ -33,23 +36,12 @@ class Box():
         if left_y_force.y > 0 or right_y_force.y > 0:
             self.is_crushed = True
         
-        self.forces_have_been_applied = True
-        self.resulting_forces (left_y_force, right_y_force)
+        self.resulting_forces = (left_y_force, right_y_force)
         
     def reset_applied_forces(self):
         self.forces_have_been_applied = False
         self.forces_with_locs = []
-        
-    def apply_force_to_self(self, F, loc):
-        self.forces_with_locs.append((F, loc))
-        
-    def apply_resulting_left_force_to_other_box(self, box, loc):
-        left_force = self.get_resulting_forces()[0]
-        box.apply_force(left_force, loc)
-        
-    def apply_resulting_left_force_to_other_box(self, box, loc):
-        left_force = self.get_resulting_forces()[0]
-        box.apply_force(left_force, loc)
+        self.resulting_forces = None
         
     def print_box_info(self):
         forces = self.get_resulting_forces()
@@ -62,18 +54,24 @@ class Box():
             print '%s at %s' % tup
         print 'Was crushed? %s' % self.is_crushed
         print
-        print 'Resulting forces from %s: left %s; right %s' % (self.name, forces[0], forces[1])
+        print 'Resulting forces from %s: left %s; right %s' % (self.name, self.resulting_forces[0], self.resulting_forces[1])
         print '=========================================='
         print
 
 class BoxStack():
-    def __init__(self, first_box, boxes):
-        self.first_box = first_box
-        self.boxes = boxes
+    def __init__(self, initial_force_and_loc, boxes):
+        self.force_and_loc = initial_force_and_loc #for now this can only be a single vector
+        self.boxes = boxes #must be in order by layers from top to bottom!
         
-    def apply_forces_with_locations_to_system(self, FL):
-        for tup in FL:
-            self.first_box.apply_force_to_self(tup[0], tup[1])
+    def apply_force_to_box(self, FL, box):
+        box.apply_force(FL[0], FL[1])
+        box.get_resulting_forces()
+        if box.associated_boxes['left'] is not None:
+            left = box.associated_boxes['left']
+            self.apply_force_to_box((box.resulting_forces[0], left[1]), left[0])
+        if box.associated_boxes['right'] is not None:
+            right = box.associated_boxes['right']
+            self.apply_force_to_box((box.resulting_forces[1], right[1]), right[0])
 
 def six_box_pyramid(F):
     '''
@@ -87,11 +85,14 @@ def six_box_pyramid(F):
     b6 = Box('Box 6', 10, 5, [])
     b5 = Box('Box 5', 10, 5, [])
     b4 = Box('Box 4', 10, 5, [])
-    b3 = Box('Box 3', 10, 5, [b5, b6])
-    b2 = Box('Box 2', 10, 5, [b4, b5])
-    b1 = Box('Box 1', 10, 5, [b2, b3])
+    b3 = Box('Box 3', 10, 5, [(b5, b5.size / 2), (b6, b6.size / 2)])
+    b2 = Box('Box 2', 10, 5, [(b4, b4.size / 2), (b5, b5.size / 2)])
+    b1 = Box('Box 1', 10, 5, [(b2, b2.size / 2), (b3, b3.size / 2)])
     
-    system = BoxStack(b1, [b1,b2,b3,b4,b5,b6])
-    system.apply_forces_with_locations_to_system([(F, b1.size / 2)])
+    system = BoxStack((F, b1.size / 2), [b1,b2,b3,b4,b5,b6])
+    #system.apply_forces_with_locations_to_system()
+    system.apply_force_to_box((F, b1.size / 2), b1)
+    for box in system.boxes:
+        box.print_box_info()
     
-six_box_pyramid(vec2d(0, 20))
+six_box_pyramid(vec2d(0, 40))
