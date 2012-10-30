@@ -9,6 +9,7 @@ class Box():
         self.size = size*1.0
         self.resistance = resistance*1.0
         self.forces_with_locs = []
+        self.is_crushed = False
         
     def get_resulting_forces(self):
         left_y_force = vec2d(0,0)
@@ -23,6 +24,8 @@ class Box():
                 left_y_force.y += force[0].y * (1 - force[1]/self.size)
         left_y_force.y = max(left_y_force.y - self.resistance, 0)
         right_y_force.y = max(right_y_force.y - self.resistance, 0)
+        if left_y_force.y > 0 or right_y_force.y > 0:
+            self.is_crushed = True
         return (left_y_force, right_y_force)
         
     def apply_force_to_box(self, F, loc):
@@ -36,8 +39,9 @@ def print_box_info(box_name, box, forces):
     print 'Applied forces:'
     for tup in box.forces_with_locs:
         print '%s at %s' % tup
+    print 'Was crushed? %s' % box.is_crushed
     print
-    print 'Resulting forces from Box 1: left %s; right %s' % forces
+    print 'Resulting forces from %s: left %s; right %s' % (box_name, forces[0], forces[1])
     print '=========================================='
     print
 
