@@ -1,5 +1,10 @@
 from vec import vec2d
 
+def poll(_list):
+    temp = _list[0]
+    _list.remove(temp)
+    return temp
+
 class Box():
     def __init__(self, name, size, resistance, boxes):
         self.name = name
@@ -59,9 +64,10 @@ class Box():
         print
 
 class BoxStack():
-    def __init__(self, initial_force_and_loc, boxes):
-        self.force_and_loc = initial_force_and_loc #for now this can only be a single vector
+    def __init__(self, initial_force, boxes, trajectory):
+        self.initial_force = initial_force #for now this can only be a single vector
         self.boxes = boxes #must be in order by layers from top to bottom!
+        self.trajectory = trajectory #list of boxes that the force will travel through, with locations of hit
         
     def apply_force_to_box(self, FL, box):
         box.apply_force(FL[0], FL[1])
@@ -81,14 +87,40 @@ class BoxStack():
     def calculate_total_force_to_ground(self):
         v = vec2d(0,0)
         for box in self.boxes:
-            if box.associated_boxes['left'] is None:
-                #if no associated boxes we can just assume they are on the ground
-                v += box.resulting_forces[0]
-            if box.associated_boxes['right'] is None:
-                #if no associated boxes we can just assume they are on the ground
-                v += box.resulting_forces[1]
+            #no associated boxes beneath it ==> on ground
+            if box.associated_boxes['left'] is None and box.associated_boxes['right'] is None:
+                if box.resulting_forces is not None: #in case forces were not applied yet
+                    v += box.resulting_forces[0]
+                    v += box.resulting_forces[1]
         return v
-                
+        
+    def prune_crushed_boxes(self):
+        for box in self.boxes:
+            if box.is_crushed:
+                self.boxes.remove(box)
+        
+    def run_system(self):
+        count = 1
+        force = self.initial_force
+        while (not self.all_boxes_crushed() and len(self.trajectory) > 0) or self.calculate_total_force_to_ground() == vec2d(0,0):
+            box, loc = poll(self.trajectory)
+            self.apply_force_to_box((fogrce, loc), box)
+            
+            print
+            print '~~~~~~~~~~~~~~~~~~'
+            print 'Iteration %s' % count
+            for box in self.boxes:
+                box.print_box_info()
+            print '~~~~~~~~~~~~~~~~~~'
+            print
+            
+            print 'Total force to ground: %s' % self.calculate_total_force_to_ground()
+            self.prune_crushed_boxes()
+            for box in self.boxes:
+                box.reset_applied_forces()
+            count += 1
+
+#give boxes and locs in order of trajectory                
 
 def six_box_pyramid(F):
     '''
@@ -106,11 +138,23 @@ def six_box_pyramid(F):
     b2 = Box('Box 2', 10, 5, [(b4, b4.size / 2), (b5, b5.size / 2)])
     b1 = Box('Box 1', 10, 5, [(b2, b2.size / 2), (b3, b3.size / 2)])
     
-    system = BoxStack((F, b1.size / 2), [b1,b2,b3,b4,b5,b6])
-    system.apply_force_to_box((F, b1.size / 2), b1)
-    for box in system.boxes:
-        box.print_box_info()
-    print system.all_boxes_crushed()
-    print system.calculate_total_force_to_ground()
+    system = BoxStack(F, [b1,b2,b3,b4,b5,b6], [(b1, b1.size/2), (b3, b3.size/2), (b5, b5.size)])
+    system.run_system()
     
-six_box_pyramid(vec2d(0, 80))
+def weird_pyramid(F):
+    ''' 
+           |_____1____|
+           |__2_||__3_|
+        |__4_||__5_||__6_|
+    '''
+    
+    b6 = Box('Box 6', 10, 5, [])
+    b5 = Box('Box 5', 10, 5, [])
+    b4 = Box('Box 4', 10, 5, [])
+    b3 = Box('Box 3', 10, 5, [(b5, b5.size / 2), (b6, b6.size / 2)])
+    b2 = Box('Box 2', 10, 5, [(b4, b4.size / 2), (b5, b5.size / 2)])
+    b1 = Box('Box 1', 20, 5, [(b2, 0), (b3, b3.size)])
+    
+six_box_pyramid(vec2d(0, 40))
+#weird_pyramid(vec2d(0, 80))
+#F = 2550; C = ?
