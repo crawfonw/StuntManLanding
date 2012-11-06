@@ -21,6 +21,11 @@ class Box():
             self.associated_boxes = {'left': boxes[0], 'right': boxes[1]}
         else:
             raise ValueError('Length of argument boxes should be 0 or 2.')
+            
+    def __str__(self):
+        return self.name
+        
+    __repr__ = __str__
     
     def apply_force(self, F, loc):
         self.forces_with_locs.append((F, loc))
@@ -47,6 +52,7 @@ class Box():
         self.forces_have_been_applied = False
         self.forces_with_locs = []
         self.resulting_forces = None
+        self.is_crushed = False
         
     def print_box_info(self):
         forces = self.get_resulting_forces()
@@ -95,17 +101,20 @@ class BoxStack():
         return v
         
     def prune_crushed_boxes(self):
+        to_remove = []
         for box in self.boxes:
             if box.is_crushed:
-                self.boxes.remove(box)
+                to_remove.append(box)
+        for box in to_remove:
+            self.boxes.remove(box)
         
     def run_system(self):
         count = 1
         force = self.initial_force
-        while (not self.all_boxes_crushed() and len(self.trajectory) > 0) or self.calculate_total_force_to_ground() == vec2d(0,0):
+        while True:
             box, loc = poll(self.trajectory)
-            self.apply_force_to_box((fogrce, loc), box)
-            
+            self.apply_force_to_box((force, loc), box)
+            force = self.calculate_total_force_to_ground()
             print
             print '~~~~~~~~~~~~~~~~~~'
             print 'Iteration %s' % count
@@ -113,14 +122,16 @@ class BoxStack():
                 box.print_box_info()
             print '~~~~~~~~~~~~~~~~~~'
             print
-            
-            print 'Total force to ground: %s' % self.calculate_total_force_to_ground()
+            print 'Total force to ground: %s' % force
             self.prune_crushed_boxes()
             for box in self.boxes:
                 box.reset_applied_forces()
             count += 1
-
-#give boxes and locs in order of trajectory                
+            
+            if len(self.trajectory) == 0:
+                break
+            if force == vec2d(0,0):
+                break
 
 def six_box_pyramid(F):
     '''
@@ -155,6 +166,6 @@ def weird_pyramid(F):
     b2 = Box('Box 2', 10, 5, [(b4, b4.size / 2), (b5, b5.size / 2)])
     b1 = Box('Box 1', 20, 5, [(b2, 0), (b3, b3.size)])
     
-six_box_pyramid(vec2d(0, 40))
+six_box_pyramid(vec2d(0, 80))
 #weird_pyramid(vec2d(0, 80))
 #F = 2550; C = ?
