@@ -4,6 +4,9 @@ def poll(_list):
     temp = _list[0]
     _list.remove(temp)
     return temp
+    
+def peek(_list):
+    return _list[0]
 
 class Box():
     def __init__(self, name, size, resistance, boxes):
@@ -107,6 +110,14 @@ class BoxStack():
                 to_remove.append(box)
         for box in to_remove:
             self.boxes.remove(box)
+            
+    def prune_trajectory_boxes(self):
+        to_remove = []
+        for tup in self.trajectory:
+            if tup[0] not in self.boxes:
+                to_remove.append(tup)
+        for tup in to_remove:
+            self.trajectory.remove(tup)
         
     def run_system(self):
         count = 1
@@ -127,6 +138,8 @@ class BoxStack():
             for box in self.boxes:
                 box.reset_applied_forces()
             count += 1
+            
+            self.prune_trajectory_boxes()
             
             if len(self.trajectory) == 0:
                 break
@@ -149,7 +162,7 @@ def six_box_pyramid(F):
     b2 = Box('Box 2', 10, 5, [(b4, b4.size / 2), (b5, b5.size / 2)])
     b1 = Box('Box 1', 10, 5, [(b2, b2.size / 2), (b3, b3.size / 2)])
     
-    system = BoxStack(F, [b1,b2,b3,b4,b5,b6], [(b1, b1.size/2), (b3, b3.size/2), (b5, b5.size)])
+    system = BoxStack(F, [b1,b2,b3,b4,b5,b6], [(b1, b1.size/2), (b3, b3.size/2), (b6, b6.size)])
     system.run_system()
     
 def weird_pyramid(F):
